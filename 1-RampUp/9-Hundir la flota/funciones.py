@@ -24,7 +24,7 @@ def disparo_aleatorio ():
 
 def menu_opciones ():
     print ("Es tu turno. ¿Qué quieres hacer?:")
-    print ("1: Seguir jugando")
+    print ("1 - Jugar")
     print ("0 - Salir")
     while (True):
         try:
@@ -35,3 +35,19 @@ def menu_opciones ():
                 print ("Introduce una opción válida: ")
         except:
             print ("Introduce una opción válida: ")
+
+def mensaje_turno_jugador ():
+            print ("-"*42)
+            print ()
+            print ("              TE TOCA DISPARAR")
+            print ()
+            print ("-"*42)
+            print ()
+            print ()
+
+def mensaje_turno_PC ():
+            print ("-"*42)
+            print ()
+            print ("             LA MÁQUINA ESTÁ DISPARANDO")
+            print ()
+            print ("-"*42)

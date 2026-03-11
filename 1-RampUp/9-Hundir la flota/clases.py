@@ -22,6 +22,7 @@ class Tablero:
             self.tabla_disparos.append (fila2)
     
     def coloca_barcos_manual (self):
+        # Función de prueba para comprobar que se acaba el juego rápido
         self.tabla_barcos[1][0] = "B"
         self.tabla_barcos[1][1] = "B"
         self.tabla_barcos [9][9] = "B"     
@@ -34,8 +35,7 @@ class Tablero:
         orientaciones = ["N","S","E","O"]
            
         for n in self.mis_barcos.values():
-            colocando = True # controla si el barco se ha podido colocar:no que esté encima de otro y esté
-        # dentro del tablero
+            colocando = True # controla si el barco se ha podido colocar
             while (colocando):
                 i = random.randint (0,TAMANIO-1)
                 j = random.randint (0,TAMANIO-1)
@@ -61,10 +61,17 @@ class Tablero:
                         barco.append ([fila,col])
                         i=fila
                         j=col
-                #Compruebo que en ninguna posición de la lista hay ya un barco
+                # Compruebo que todas las posiciones están en la lista
+                # que en ninguna posición de la lista hay ya un barco
+                # que no hay barcos en las celdas contiguas
                 valido = True
                 for i,j in barco:
-                    if (0> i) or (i> TAMANIO-1) or (0> j) or (j > TAMANIO-1) or self.tabla_barcos [i][j] == "B":
+                    if (
+                        (0> i) or (i> TAMANIO-1) or 
+                        (0> j) or (j > TAMANIO-1) 
+                        or self.tabla_barcos [i][j] == "B" 
+                        or not self.comprueba_celdas_vecinas (i,j)
+                    ):
                         valido = False
                         break 
                 #coloca el barco
@@ -73,6 +80,24 @@ class Tablero:
                         self.tabla_barcos [i][j] = "B"
                     colocando = False #barco colocado   
     
+    def comprueba_celdas_vecinas (self,i,j): 
+        # Comprueba las 8 celdas vecinas al disparo i,j: [i-1][j-1],[i-1][j],[i-1][j+1]...etc
+        # Si la celda está fuera del tablero o está vacía devuelve es ok
+        # Devuelve true si podríamos colocar un barco y False si no
+        if (
+            ((i-1 < 0 or j-1 < 0) or self.tabla_barcos[i-1][j-1] != "B") and 
+            ((i-1 < 0) or self.tabla_barcos [i-1][j] != "B") and 
+            ((i-1 < 0 or j+1 > 9) or self.tabla_barcos [i-1][j+1] != "B") and 
+            ((j-1 < 0) or self.tabla_barcos [i][j-1] != "B") and 
+            ((j+1 > 9) or self.tabla_barcos[i][j+1] !="B") and 
+            ((i+1 > 9 or j-1 < 0) or self.tabla_barcos [i+1][j-1] != "B") and 
+            ((i+1 > 9) or self.tabla_barcos [i+1][j] != "B") and 
+            ((i+1 > 9 or j+1 > 9) or self.tabla_barcos[i+1][j+1] != "B")
+
+            ):
+                return True
+        else:
+            return False   
     def imprime_tablero (self,selecc):
         #Uso el mismo método para imprimir los dos tableros dependiendo del parámetro
         # 1 me imprime el estado de mis barcos
@@ -82,7 +107,7 @@ class Tablero:
         else:
             tablero = self.tabla_disparos
 
-        os.system('cls')
+        #os.system('cls')
 
         # Printa tb una fila de 0 al 9 arriba y el 0 a 9 al principio de la columna para facilitar a donde
         # disparar
@@ -98,7 +123,7 @@ class Tablero:
         '''Devuelve true si el disparo ha tocado barco o False si ha tocado agua'''
         if self.tabla_barcos [i][j] == "B":
             return True
-        elif self.tabla_barcos [i][j] == " ":
+        else: # puede haber " " o "O" si ya había disparado ahí
             return False
     
     def actualiza_tablero (self, disparo, i, j): 
