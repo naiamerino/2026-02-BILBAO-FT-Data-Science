@@ -83,7 +83,8 @@ class Tablero:
     def comprueba_celdas_vecinas (self,i,j): 
         # Comprueba las 8 celdas vecinas al disparo i,j: [i-1][j-1],[i-1][j],[i-1][j+1]...etc
         # Si la celda está fuera del tablero o está vacía devuelve es ok
-        # Devuelve true si podríamos colocar un barco y False si no
+        # Devuelve true si no tienen barco y False si no
+        # Sirve tanto para colocar los barcos aleatoriamente como para saber si un barco está hundido
         if (
             ((i-1 < 0 or j-1 < 0) or self.tabla_barcos[i-1][j-1] != "B") and 
             ((i-1 < 0) or self.tabla_barcos [i-1][j] != "B") and 

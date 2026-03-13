@@ -14,7 +14,7 @@ tablero_PC = clases.Tablero ("PC",TAMANIO,LISTA_BARCOS)
 tablero_jugador.inicializa_tableros()
 tablero_PC.inicializa_tableros()
 tablero_jugador.coloca_barcos_random()
-# tablero_PC.coloca_barcos_manual() #para comprobar rápido que acaba la partida
+#tablero_PC.coloca_barcos_manual() #para comprobar rápido que acaba la partida
 tablero_PC.coloca_barcos_random()
 print(figlet_format("HUNDIR LA FLOTA"))
 print ("¡Bienvenido a hundir la flota!")
@@ -38,6 +38,10 @@ while (True):
             #tablero_jugador.imprime_tablero (0) # muestro en pantalla el disparo
                     
             if (acierto):
+                # Compruebo si el barco está hundido
+                hundido =tablero_PC.comprueba_celdas_vecinas (fila, columna)
+                if (hundido):
+                    print ("¡Barco hundido!")
                 #Compruebo si quedan barcos
                 if(tablero_PC.es_fin_partida ()):
                     os.system ('cls')
@@ -59,7 +63,10 @@ while (True):
         tablero_jugador.actualiza_tablero (acierto, fila, columna)
         tablero_jugador.imprime_tablero (1)
         if (acierto):
-            time.sleep (2) # que de tiempo a leer que ha acertado
+            hundido = tablero_jugador.comprueba_celdas_vecinas (fila, columna)
+            if (hundido):
+                print ("¡Barco hundido!")
+            time.sleep (2) # que de tiempo a leer el resultado de su tirada
             #Compruebo si quedan barcos
             if(tablero_jugador.es_fin_partida ()):
                 print ("La máquina te ha ganado :-(")
