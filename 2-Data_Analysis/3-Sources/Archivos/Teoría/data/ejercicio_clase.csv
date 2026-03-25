@@ -1,5 +1,6 @@
-;poblacion;superficie
-Madrid;6685471;8028
-Galicia;2698764;29575
-Murcia;1494442;11314
-Andalucia;8446561;87599
+colA;colB;colC
+0;6;20
+1;7;21
+2;8;22
+3;9;23
+4;10;24
