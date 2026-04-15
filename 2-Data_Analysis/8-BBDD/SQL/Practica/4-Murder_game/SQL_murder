@@ -1,0 +1,95 @@
+-- ver la pinta que tiene
+SELECT * 
+FROM crime_scene_report;
+
+SELECT description 
+FROM crime_scene_report
+WHERE date = '20180115' AND type = 'murder' and city = 'SQL City';
+
+SELECT * FROM PERSON;
+
+-- SACAMOS LA INFO DEL TESTIGO 1
+SELECT *
+FROM person
+WHERE address_street_name LIKE 'Northwestern%'
+ORDER BY address_number DESC
+LIMIT 1;
+
+
+-- SACAMOS LA INFO DEL TESTIGO 2
+SELECT *
+FROM person
+WHERE name LIKE 'Annabel%'
+  AND address_street_name LIKE 'Franklin%';
+
+--vamos a ver qué han dicho
+SELECT person_id, transcript FROM interview
+WHERE person_ID IN ('14887','16371');
+
+--buscamos la información que corresponde a lo que indica un testigo. 
+SELECT name, person_id FROM get_fit_now_member AS GM
+INNER JOIN get_fit_now_check_in AS GC ON GM.id = GC.membership_id
+WHERE GC.membership_id LIKE '48Z%' and GM.membership_status = 'gold';
+
+--salen dos. Compmrobamos la matricula
+SELECT *  FROM person
+INNER JOIN drivers_license ON person.license_id = drivers_license.id
+WHERE drivers_license.plate_number LIKE '%H42W%' AND gender = 'male';
+
+-- sale que Jeremy Bowers tiene ese coche pero también otra persona Tushar Chandra
+
+--vamos con el otro testimonio
+SELECT name, person_id, GC.check_in_time, GC.check_out_time FROM get_fit_now_member AS GM
+INNER JOIN get_fit_now_check_in AS GC ON GM.id = GC.membership_id
+WHERE GM.membership_status ='gold' AND GC.membership_id LIKE '48Z%' AND   GC.check_in_date = '20180109';
+
+--Joe Germuska
+--Jeremy Bowers
+--añadimos las horas para ver cuanto tiempo están
+
+--vamos a ver las entrevistas a los sospechosos
+SELECT person.name,person_id, transcript FROM interview
+INNER JOIN person ON person.id = interview.person_id
+WHERE person.name IN ('Joe Germuska','Jeremy Bowers','Tushar Chandra');
+
+--Parece que le ha contratado una mujer como sicario. Vamos a ver quien es esa mujer
+
+-- empezamos por el coche y el evento
+SELECT person.name FROM person
+INNER JOIN drivers_license ON person.license_id = drivers_license.id
+INNER JOIN facebook_event_checkin ON person.id = facebook_event_checkin.person_id
+WHERE drivers_license.car_make = 'Tesla' AND drivers_license.car_model = 'Model S' AND facebook_event_checkin.event_name = 'SQL Symphony Concert';
+
+--solo sale Miranda Priestly. Parece la autora intelectual. Vamos a comprobar
+SELECT annual_income, person.id FROM income
+INNER JOIN person ON person.ssn = income.ssn
+WHERE person.name = 'Miranda Priestly';
+
+--el equipo investigador tiene dudas de si 310000 pueden considerarse altos ingresos. 
+-- Vamos a ver la media de los ingresos
+-- 
+
+SELECT AVG(annual_income) FROM income;
+
+--Parece nuestra chica. A ver qué dice
+
+SELECT transcript FROM interview
+WHERE person_id = '99716';
+
+--no ha dado su testimonio
+
+-- vamos a investigar a Jerermy
+SELECT * FROM facebook_event_checkin
+INNER JOIN person ON person.id = facebook_event_checkin.person_id
+WHERE person.name = 'Jeremy Bowers';
+
+--En la fecha del crimen el autor material está en un evento. No sabemos donde es este evento. ¿Será en SQL city?
+
+-- Con la información que tenemos es autor material es Jeremy Bowers
+-- Y la autora intelectual Miranda Priestly
+
+
+INSERT INTO solution VALUES (1, 'Jeremy Bowers');
+        SELECT value FROM solution;
+
+

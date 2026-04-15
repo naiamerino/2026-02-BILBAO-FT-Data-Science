@@ -1,0 +1,7 @@
+-- ver la pinta que tiene
+SELECT * 
+FROM crime_scene_report;
+
+SELECT description 
+FROM crime_scene_report
+WHERE date = '20180115' AND type = 'murder' and city = 'SQL City'
