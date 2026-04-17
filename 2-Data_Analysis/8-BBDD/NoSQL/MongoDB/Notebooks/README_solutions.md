@@ -3,14 +3,23 @@
 READ
 ----
 
-1. Mostrar todos los documentos de la colección restaurantes
-   db["2026-02-test"].find();
+Primero me tengo que conectar a la base de datos: 
+
+```
+use["2026-02-clase"]
+```
+
+1. Mostrar todos los documentos de la colección restaurantes - *es el equivalente a un SELECT* de SQL*
+   db["2026-02-test"].find(); - 2026-02-test es la colección (como si fuera una tabla)
 2. Mostrar los campos restaurant_id, nombre, distrito y cocina, pero excluya el campo _id para todos los documentos de la colección restaurantes
-   db["2026-02-test"].find({},{"restaurant_id" : 1,"name":1,"borough":1,"cuisine" :1,"_id":0});
+   db["2026-02-test"].find({},{"restaurant_id" : 1,"name":1,"borough":1,"cuisine" :1,"_id":0}) - *el id propio de mongo te lo muestra siempre, si no quieres que lo muestre le pones a 0. Los demás campos que quieras que te muestre los pones a 1. Si no quieres que lo muestre no lo incluyes (si pones 0 dará error)*
+
+   *find() es que lo muestre todo. Una vez que vas a seleccionar hay que poner llaves find ({}). Dentro de ellas puedes poner las condiciones (el equivalente al WHERE)*
 3. Mostrar los primeros 5 restaurantes que se encuentran en el distrito Bronx
-   db["2026-02-test"].find({"borough": "Bronx"}).limit(5);
+   db["2026-02-test"].find({"borough": "Bronx"}).limit(5); *-todos los campos donde el barrio sea el bronx. Los 5 primeros*
 4. Encontrar los restaurantes que lograron una puntuación superior a 80 pero inferior a 100
    db["2026-02-test"].find({grades : { $elemMatch:{"score":{$gt : 80 , $lt :100}}}});
+   *elemMatch es el elemento para decir que me busque los elementos que cumplan algo. Los elementos comparativos que se usan son gt  greaterthan >=, lt - lowerthan...*
 5. Encontrar los restaurantes que se ubican en un valor de latitud inferior a -95.754168
    db["2026-02-test"].find({"address.coord" : {$lt : -95.754168}});
 6. Encontrar los restaurantes que no preparan ninguna cocina de 'estadounidense' y lograron una puntuación superior a 70 y se ubicaron en una longitud inferior a -65.754168. Nota: Realice esta consulta sin usar el operador $and
@@ -28,24 +37,30 @@ READ
    "address.coord" : {$lt : -65.754168}
    }
    );
+
+   $ne y  not sirven para negar
 7. Encontrar los restaurantes que no preparan comida americana y lograron  calificación 'A' que no pertenece al distrito de Brooklyn. El documento debe mostrarse según la cocina en orden descendente.
    db["2026-02-test"].find( {
    "cuisine" : {$ne : "American "},
-   "grades.grade" :"A",
+   "grades.grade" :"A", *QUE SEA IGUAL, NO NECESITA PONER NOT EQUAL*
    "borough": {$ne : "Brooklyn"}
    }
    ).sort({"cuisine":-1});
+
+   *ne - not equal*
 8. Encontrar los restaurantes que pertenecen al distrito Bronx y preparan platos americanos o chinos
    db["2026-02-test"].find(
    {
-   "borough": "Bronx" ,
-   $or : [
+   "borough": "Bronx" , - DISTRITO BRONX SÍ O SÍ
+   $or : [			- EL OR Y SEGUIDO LAS OPCIONES
    { "cuisine" : "American " },
    { "cuisine" : "Chinese" }
    ]
    }
    );
 9. Encontrar la identificación del restaurante, el nombre, el distrito y la cocina para aquellos restaurantes que pertenecen al distrito de Staten Island o Queens o Bronxor Brooklyn
+
+   AQUÍ METO YA UN WHERE (CONDICION) Y SELECT (LE ESPECIFICO LO QUE QUIERO). ANTES NO ESTABA ESPECIFICANDO POR LO QUE ME DEVUELVE TODO EL REGISTRO
    db["2026-02-test"].find(
    {"borough" :{$in :["Staten Island","Queens","Bronx","Brooklyn"]}},
    {
@@ -84,7 +99,6 @@ READ
     {"restaurant_id" : 1,"name":1,"address":1,"coord":1}
     );
 
-
     CREATE
 
 ---
@@ -101,7 +115,6 @@ READ
     restaurant_id:"873683997" }
     )
 
-
     UPDATE
 
 ---
@@ -112,7 +125,6 @@ READ
 15. Actualiza el nombre del restaurante "Wild Asia" por "Wild Wild West"
     db["2026-02-test"].updateOne({"name": "Wild Asia"},
     {$set:{"name": "Wild Wild West"}});
-
 
     DELETE
 
