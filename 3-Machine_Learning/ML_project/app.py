@@ -150,7 +150,7 @@ def jugadoras_activas(df):
     # Recuperar nombres originales desde el histórico usando match_id
     # Cargamos wta para sacar nombres
     try:
-        wta = pd.read_csv('wta_copia_mod.csv', low_memory=False)
+        wta = pd.read_csv('wta_limpio.csv', low_memory=False)
         ids_recientes = recientes['match_id'].values
         jugadoras = pd.concat([
             wta.loc[wta.index.isin(ids_recientes), 'Player_1'],
@@ -165,7 +165,7 @@ jugadoras = jugadoras_activas(df)
 # ─── Funciones de features ────────────────────────────────────────────────────
 @st.cache_data
 def cargar_wta():
-    wta = pd.read_csv('wta_copia_mod.csv', low_memory=False)
+    wta = pd.read_csv('wta_limpio.csv', low_memory=False)
     wta['Date'] = pd.to_datetime(wta['Date'], errors='coerce')
     wta = wta.dropna(subset=['Date'])
     return wta
