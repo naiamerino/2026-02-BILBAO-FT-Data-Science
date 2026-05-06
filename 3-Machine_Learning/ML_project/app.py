@@ -172,63 +172,53 @@ def cargar_wta():
 
 wta = cargar_wta()
 
-def forma_reciente(df_wta, jugadora, fecha_limite, meses=2, superficie=None):
-    fecha_inicio = fecha_limite - pd.DateOffset(months=meses)
-    mask = (
-        ((df_wta['Player_1'] == jugadora) | (df_wta['Player_2'] == jugadora)) &
-        (df_wta['Date'] < fecha_limite) &
-        (df_wta['Date'] >= fecha_inicio)
-    )
-    if superficie:
-        mask &= (df_wta['Surface'] == superficie)
-    partidos = df_wta[mask]
-    if len(partidos) == 0:
-        return 0
-    victorias = (
-        ((partidos['Player_1'] == jugadora) & (partidos['Winner'] == 1)) |
-        ((partidos['Player_2'] == jugadora) & (partidos['Winner'] == 2))
-    ).sum()
-    return victorias/len(partidos)
+def forma_reciente(df, jugadora, fecha_limite, meses=2, superficie=None):
+        fecha_inicio = fecha_limite - pd.DateOffset(months=meses)
+        mask = (
+        ((df['Player_1'] == jugadora) | (df['Player_2'] == jugadora)) &
+        (df['Date'] < fecha_limite) &
+        (df['Date'] >= fecha_inicio)
+        )
+        partidos = df[mask]
+        if len(partidos) == 0:
+            return 0
+        victorias = (partidos['Winner'] == jugadora).sum()
+        return victorias/len(partidos)
 
-def winrate(df_wta, jugadora, fecha_limite, superficie=None, ronda=None):
+def winrate(df, jugadora, fecha_limite, superficie=None, ronda=None):
     mask = (
-        ((df_wta['Player_1'] == jugadora) | (df_wta['Player_2'] == jugadora)) &
-        (df_wta['Date'] < fecha_limite)
+        ((df['Player_1'] == jugadora) | (df['Player_2'] == jugadora)) &
+        (df['Date'] < fecha_limite)
     )
     if superficie:
-        mask &= (df_wta['Surface'] == superficie)
+        mask &= (df['Surface'] == superficie)
     if ronda:
-        mask &= (df_wta['Round'] == ronda)
-    partidos = df_wta[mask]
+        mask &= (df['Round'] == ronda)
+    partidos = df[mask]
     if len(partidos) == 0:
         return 0.4
-    victorias = (
-        ((partidos['Player_1'] == jugadora) & (partidos['Winner'] == 1)) |
-        ((partidos['Player_2'] == jugadora) & (partidos['Winner'] == 2))
-    ).sum()
+    victorias = (partidos['Winner'] == jugadora).sum()
     return victorias/len(partidos)
 
-def headtohead(df_wta, p1, p2, fecha_limite):
+def headtohead(df, p1, p2, fecha_limite):
     mask = (
-        ((df_wta['Player_1'] == p1) & (df_wta['Player_2'] == p2)) |
-        ((df_wta['Player_1'] == p2) & (df_wta['Player_2'] == p1))
-    ) & (df_wta['Date'] < fecha_limite)
-    partidos = df_wta[mask]
+        (
+            ((df['Player_1'] == p1) & (df['Player_2'] == p2)) |
+            ((df['Player_1'] == p2) & (df['Player_2'] == p1))
+        ) & (df['Date'] < fecha_limite)
+    )
+    partidos = df[mask]
     if len(partidos) == 0:
         return 0.5
-    victorias_p1 = (
-        ((partidos['Player_1'] == p1) & (partidos['Winner'] == 1)) |
-        ((partidos['Player_2'] == p1) & (partidos['Winner'] == 2))
-    ).sum()
+    victorias_p1 = (partidos['Winner'] == p1).sum()
     return victorias_p1/len(partidos)
 
-def experiencia(df_wta, jugadora, fecha_limite):
+def experiencia(df, jugadora, fecha_limite):
     mask = (
-        ((df_wta['Player_1'] == jugadora) | (df_wta['Player_2'] == jugadora)) &
-        (df_wta['Date'] < fecha_limite)
+        ((df['Player_1'] == jugadora) | (df['Player_2'] == jugadora)) &
+        (df['Date'] < fecha_limite)
     )
-    partidos = partidos = df[mask]
-    return len(partidos)
+    return df[mask].shape[0]
 
 def get_ranking(df_wta, jugadora, fecha_limite):
     mask = (
@@ -243,22 +233,22 @@ def get_ranking(df_wta, jugadora, fecha_limite):
         return ultimo['Rank_1']
     return ultimo['Rank_2']
 
-def construir_features(p1, p2, superficie, ronda, fecha):
-    rank_p1 = get_ranking(wta, p1, fecha)
-    rank_p2 = get_ranking(wta, p2, fecha)
+def construir_features(df_wta, p1, p2, superficie, ronda, fecha):
+    rank_p1 = get_ranking(df_wta, p1, fecha)
+    rank_p2 = get_ranking(df_wta, p2, fecha)
     row = {
         'surface': superficie,
         'round': ronda,
         'rank_diff': rank_p1 - rank_p2,
-        'wins2meses_p1': forma_reciente(wta, p1, fecha),
-        'wins2meses_p2': forma_reciente(wta, p2, fecha),
-        'ratio_superficie_p1': winrate(wta, p1, fecha, superficie=superficie),
-        'ratio_superficie_p2': winrate(wta, p2, fecha, superficie=superficie),
-        'h2h': headtohead(wta, p1, p2, fecha),
-        'ratio_ronda_p1': winrate(wta, p1, fecha, ronda=ronda),
-        'ratio_ronda_p2': winrate(wta, p2, fecha, ronda=ronda),
-        'experiencia_p1': experiencia(wta, p1, fecha),
-        'experiencia_p2': experiencia(wta, p2, fecha),
+        'wins2meses_p1': forma_reciente(df_wta, p1, fecha),
+        'wins2meses_p2': forma_reciente(df_wta, p2, fecha),
+        'ratio_superficie_p1': winrate(df_wta, p1, fecha, superficie=superficie),
+        'ratio_superficie_p2': winrate(df_wta, p2, fecha, superficie=superficie),
+        'h2h': headtohead(df_wta, p1, p2, fecha),
+        'ratio_ronda_p1': winrate(df_wta, p1, fecha, ronda=ronda),
+        'ratio_ronda_p2': winrate(df_wta, p2, fecha, ronda=ronda),
+        'experiencia_p1': experiencia(df_wta, p1, fecha),
+        'experiencia_p2': experiencia(df_wta, p2, fecha),
         'tournament_type': 'GS'  # por defecto
     }
     return pd.DataFrame([row])
