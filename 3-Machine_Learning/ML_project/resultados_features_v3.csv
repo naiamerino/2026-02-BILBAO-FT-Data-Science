@@ -1,0 +1,3 @@
+modelo,parametros,accuracy_modelo,accuracy_casas,accuracy_ranking,correlacion_casas,AUC_modelo,AUC casas
+Random Forest,"{'classifier__max_depth': 5, 'classifier__max_features': 0.5, 'classifier__n_estimators': 100}",0.6624,0.685,0.6272,,0.7227,0.757
+XGBoost2,"{'classifier__colsample_bytree': 1.0, 'classifier__learning_rate': 0.05, 'classifier__max_depth': 3, 'classifier__n_estimators': 200, 'classifier__subsample': 0.8}",0.6621,0.685,0.6272,,0.7242,0.757
