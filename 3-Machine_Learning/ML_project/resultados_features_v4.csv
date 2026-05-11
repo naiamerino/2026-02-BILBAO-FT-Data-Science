@@ -1,0 +1,2 @@
+modelo,parametros,accuracy_modelo,accuracy_casas,accuracy_ranking,correlacion_casas,AUC_modelo,AUC casas
+Voting,{},0.663,0.685,0.6272,,0.7229,0.757
