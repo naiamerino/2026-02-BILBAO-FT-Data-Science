@@ -47,7 +47,7 @@ No se pretende superar a las casas de apuestas, sino construir un modelo competi
 
 El dataset principal utilizado procede de Kaggle y contiene resultados históricos de partidos WTA actualizados diariamente. El conjunto incluye aproximadamente 44.000 partidos disputados entre 2007 y 2026.
 
-Adicionalmente, para experimentar con perfiles de jugadoras mediante clustering, se utilizó el dataset público de Jeff Sackmann, que incluye estadísticas avanzadas de servicio y break points.
+Adicionalmente, para experimentar con perfiles de jugadoras mediante clustering, se utilizó el dataset público de Jeff Sackmann, que incluye estadísticas de servicio y break points. Dispone de datos de partidos históricos desde 1960... pero para ser coherente con el  El conjunto incluye más de 50.000 partidos dis
 
 ## Variables originales
 
@@ -349,7 +349,7 @@ El objetivo principal era obtener buenas probabilidades para simulaciones, por l
 
 Los resultados muestran que:
 
-- El modelo supera claramente al baseline basado únicamente en ranking.
+- El modelo supera al baseline basado únicamente en ranking.
 - Las casas de apuestas siguen siendo superiores.
 - El modelo consigue aproximarse bastante a probabilidades reales utilizando únicamente datos históricos.
 

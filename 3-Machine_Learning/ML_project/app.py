@@ -148,7 +148,7 @@ st.markdown("""
         font-size: 0.88rem;
     }
     .partido-ganadora { color: #f0f0f0; font-weight: 500; }
-    .partido-perdedora { color: #555; }
+    .partido-perdedora { color: #999696; }
     .partido-prob {
         font-family: 'Bebas Neue', sans-serif;
         font-size: 1.15rem;
@@ -208,7 +208,7 @@ st.markdown("""
         font-weight: 600;
     }
     .bracket-cell.perdedora {
-        color: #555;
+        color: #999696;
         border-color: #222;
     }
     .bracket-match {
@@ -405,14 +405,6 @@ def cargar_modelo():
 @st.cache_data
 def cargar_wta():
     return pd.read_csv('wta_limpio.csv', low_memory=False, parse_dates=['Date'])
-#@st.cache_data
-# def cargar_wta():
-#     wta = pd.read_csv('wta_limpio.csv', low_memory=False)
-#     wta['Date'] = pd.to_datetime(wta['Date'], errors='coerce')
-#     wta = wta.dropna(subset=['Date'])
-#     return wta
-
-# wta = cargar_wta()
 
 @st.cache_data
 def cargar_historico():
