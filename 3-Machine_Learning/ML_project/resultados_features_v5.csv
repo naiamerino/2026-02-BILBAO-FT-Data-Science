@@ -1,0 +1,4 @@
+modelo,parametros,accuracy_modelo,accuracy_casas,accuracy_ranking,correlacion_casas,AUC_modelo,AUC casas,logloss_modelo
+Random Forest,"{'classifier__max_depth': 5, 'classifier__max_features': 0.5, 'classifier__n_estimators': 100}",0.6639,0.685,0.6272,,0.7216,0.757,0.6121
+XGBoost2,"{'classifier__colsample_bytree': 1.0, 'classifier__learning_rate': 0.05, 'classifier__max_depth': 3, 'classifier__n_estimators': 200, 'classifier__subsample': 0.8}",0.6603,0.685,0.6272,,0.7224,0.757,0.612
+XGBoostSinTournament,"{'classifier__colsample_bytree': 1.0, 'classifier__learning_rate': 0.05, 'classifier__max_depth': 3, 'classifier__n_estimators': 200, 'classifier__subsample': 0.8}",0.6603,0.685,0.6272,,0.7223,0.757,0.6121

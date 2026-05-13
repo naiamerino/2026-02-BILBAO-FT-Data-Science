@@ -8,7 +8,7 @@
 
 ### Contexto del problema y justificación
 
-El tenis profesional femenino dispone de una buena cantidad de datos históricos: resultados, rankings, superficies, cuotas de apuestas, estadísticas de juego. Sin embargo, la predicción de resultados en tenis es un problema genuinamente difícil. Intervienen múltiples factores que condicionan el resultado de un partido: ranking, estado de forma, superficie, experiencia, historial entre jugadoras o incluso el momento de la temporada. Existen rankings oficiales y cuotas de apuestas que permiten estimar probabilidades de victoria pero la predicción de partidos sigue siendo un problema complejo debido a la naturaleza dinámica del deporte. Estadísticamente suele ser más impredecible partido a partido que muchos deportes colectivos. En el caso del tenis femenino y el circuito WTA los resultados son aun más volátiles puesto que no hay tanta diferencia sostenida entre las jugadoras top y el resto del circuito. Las casas de apuestas, con equipos de analistas dedicados y acceso a información privilegiada, aciertan alrededor del 68% de los partidos. 
+El tenis profesional femenino dispone de una buena cantidad de datos históricos: resultados, rankings, superficies, cuotas de apuestas, estadísticas de juego. Sin embargo, la predicción de resultados en tenis es un problema genuinamente difícil. Intervienen múltiples factores que condicionan el resultado de un partido: ranking, estado de forma, superficie, experiencia, historial entre jugadoras o incluso el momento de la temporada. Existen rankings oficiales y cuotas de apuestas que permiten estimar probabilidades de victoria pero la predicción de partidos sigue siendo un problema complejo debido a la naturaleza dinámica del deporte. Estadísticamente suele ser más impredecible partido a partido que muchos deportes colectivos. En el caso del tenis femenino y el circuito WTA los resultados son aun más volátiles puesto que no hay tanta diferencia sostenida entre las jugadoras top y el resto del circuito. Las casas de apuestas, con equipos de analistas dedicados y acceso a información privilegiada, aciertan alrededor del 68% de los partidos.
 
 El punto de partida de este proyecto es simple: ¿puede un modelo de ML entrenado sobre datos públicos competir con ese 68%? ¿Qué información es realmente predictiva? ¿Y cómo convertimos un clasificador partido a partido en algo útil, como la simulación completa de un Grand Slam?
 
@@ -190,7 +190,7 @@ Mejores parámetros: colsample_bytree=1.0, learning_rate=0.05,
 
 Ambos modelos se mantienen deliberadamente poco profundos (`max_depth=3` o `5`) para evitar overfitting dado el nivel de ruido inherente al tenis.
 
-**Voting Classifier:** Combinación soft de los mejores estimadores de Random Forest y XGBoost, promediando sus probabilidades. Se testó como alternativa para ver si el ensemble ganaba estabilidad pero no mejoraba los resultados de los otros modelos individualmente.
+**Voting Classifier:** Combinación soft de los mejores estimadores de Random Forest y XGBoost, promediando sus probabilidades. Se testó como alternativa para ver si el ensemble ganaba estabilidad pero no mejoraba ostensiblemente los resultados de los otros modelos individualmente.
 
 ### Iteraciones y evolución del modelo
 
@@ -230,6 +230,8 @@ El salto más importante fue la incorporación del ELO (v1→v3): +2 puntos de A
 
 El modelo final seleccionado es el **XGBoost** (guardado como `gbx_v3.model`), por su AUC ligeramente superior, métrica más relevante dado que el modelo genera probabilidades utilizadas en simulaciones Monte Carlo. Se seleccionó XGBoost frente a Random Forest por su ligera superioridad en AUC . Aunque las diferencias son marginalmente significativas, pero XGBoost ofrece además mejor calibración de probabilidades por defecto y menor dependencia de features individuales, lo que lo hace más adecuado para el objetivo de este proyecto.
 
+Se compararon también las métricas de entrenamiento y test para evaluar si los modelos tenían overfitting. Las brechas obtenidas son mínimas en todos los casos: Accuracy (RF: 0.004, XGB: 0.014), AUC-ROC (RF: 0.012, XGB: 0.019). En todas las métricas el rendimiento en train es ligeramente superior al de test, lo cual es el comportamiento esperado y confirma que los modelos generalizan correctamente a partidos futuros sin memorizar el conjunto de entrenamiento.
+
 ### Interpretación: Feature Importance
 
 Los valores de importancia del XGBoost y del Random Forest cuentan una historia parecida pero con distinta intensidad:
@@ -259,7 +261,7 @@ La conclusión es clara: **el diferencial de ELO global entre las dos jugadoras 
 
 El hecho de que las tres features más importantes sean variantes del mismo concepto (quién es mejor jugadora) confirma que el tenis es en gran medida predecible por la calidad relativa de las jugadoras, y que es el ruido inherente al deporte de competición y difícilmente capturable por un modelo (lesiones y problemas físicos, rendimiento puntualmente bueno o malo , rachas) lo que separa el 66% del modelo del 100%.
 
-> **📊 Gráfico recomendado:** Barplot horizontal de feature importance del XGBoost (top 15 features). Ya está generado en el notebook: `02_Modelo_ML_36_0.png`.
+En la siguiente gráfica se muestran las 15 features ordenadas en orden de importancia para el modelo finalmente empleado:
 
 ---
 
@@ -307,19 +309,21 @@ La app carga el cuadro real del torneo, precalcula la caché de features para to
 
 ### Resultados de ejemplo: Simulación Roland Garros 2026
 
-Una ejecución de prueba con 100 simulaciones sobre el cuadro real de Roland Garros 2026 (con fecha de corte 2026-05-05) devolvió:
+La ejecución de 10.000 simulaciones sobre el cuadro 'real' de Roland Garros 2026 (con fecha de corte 2026-05-05) devolvió:
 
 | Jugadora     | % veces campeona |
 | ------------ | ---------------- |
-| Swiatek I.   | 24%              |
-| Sabalenka A. | 20%              |
+| Swiatek I.   | 20%              |
+| Sabalenka A. | 17%              |
+| Rybakina E.  | 13%              |
 | Gauff C.     | 11%              |
-| Rybakina E.  | 11%              |
-| Muchova K.   | 7%               |
-| Andreeva M.  | 6%               |
-| Otros        | 21%              |
+| Anisimova A. | 8%               |
+| Andreeva M.  | 5%               |
+| Otros        | 26%              |
 
 Swiatek como favorita en Roland Garros (su superficie y torneo histórico) es coherente con el consenso de analistas y casas de apuestas. El modelo está generando probabilidades razonables.
+
+*El cuadro final no se sortea hasta el 14 de mayo así que se ha simulado un cuadro con las 104 jugadoras con entrada directa y añadiéndoles las primeras jugadoras de la reserva. Se ha simulado un sorteo de cuadro respetando las normas en este tipo de sorteo (32 cabezas de serie, números 1 y 2 sólo pueden enfrentarse en la final, etc)
 
 ---
 
@@ -341,7 +345,7 @@ La diferencia de ~2.3 puntos respecto a las casas de apuestas puede entenderse e
 **Debilidades y limitaciones:**
 
 - El modelo no tiene acceso a información sobre el estado físico real de las jugadoras (lesiones, fatiga acumulada, días sin jugar).
-- El ruido intrínseco del tenis individual es alto: upsets frecuentes hacen que el techo de precisión de cualquier modelo sea bajo.
+- El ruido intrínseco del tenis individual es alto: hay muchos resultados inesperados hacen que el techo de precisión de cualquier modelo sea bajo.
 - La caché de features para la simulación tarda en calcularse. Para 128 jugadoras, el tiempo de preproceso es notable.
 - El KMeans de perfiles de jugadoras (basado en estadísticas de servicio) no aportó mejora, probablemente porque el dataset de estadísticas no era excesivamente exhaustivo y las variables más discriminantes ya estaban capturadas por el ELO.
 - La simulación de 10.000 iteraciones en local toma del orden de horas, lo que limita su uso interactivo en tiempo real.
@@ -350,10 +354,10 @@ La diferencia de ~2.3 puntos respecto a las casas de apuestas puede entenderse e
 
 **Mejoras del modelo:**
 
-1. **Inactividad y tendencia de ranking:** Se implementaron las funciones `inactividad()` y `tendencia_ranking()` pero no se incluyeron en la versión final por no mostrar mejora clara en primeras pruebas. Merece más exploración con un rango temporal bien calibrado.
-2. **Ponderación temporal en el entrenamiento:** Dar más peso en el entrenamiento a los partidos recientes (decay exponencial). Los últimos 3 años deberían pesar más que los de 2007–2012.
-3. **Integrar estadísticas de servicio del dataset de Jeff Sackmann** directamente como features del partido (no como perfil de jugadora). Calcular el % de primer servicio o break points salvados en los últimos N meses sería más informativo que el promedio histórico.
-4. **Calibración de probabilidades:** Evaluar si las probabilidades del modelo están bien calibradas (reliability diagram) y aplicar calibración si es necesario.
+1. **Integrar estadísticas de juego del dataset de Jeff Sackmann** directamente como features del partido (no como perfil de jugadora). Calcular el % de primer servicio o break points salvados en los últimos N meses sería más informativo que el promedio histórico. Ahora que el dataset ya incluye partidos hasta 2026 podría intentar rehacerse el trabajo sobre ese dataset y probar si esas variables adicionales
+2. **Calibración de probabilidades:** Evaluar si las probabilidades del modelo están bien calibradas (reliability diagram) y aplicar calibración si es necesario.
+3. **Inactividad y tendencia de ranking:** Se implementaron las funciones `inactividad()` y `tendencia_ranking()` pero no se incluyeron en la versión final por no mostrar mejora clara en primeras pruebas. Merece más exploración con un rango temporal bien calibrado.
+4. **Ponderación temporal en el entrenamiento:** Dar más peso en el entrenamiento a los partidos recientes (decay exponencial). Los últimos 3 años deberían pesar más que los de 2007–2012.
 5. **Apuestas como señal de mercado:** Las cuotas de apuestas son el mejor predictor individual disponible. Explorar si incorporarlas como feature de entrada (cuando están disponibles) mejoraría significativamente el AUC, aceptando que en producción solo estarían disponibles cuando el partido ya está anunciado.
 
 **Mejoras del sistema:**
