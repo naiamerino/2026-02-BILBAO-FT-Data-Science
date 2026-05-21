@@ -16,7 +16,6 @@ def all_records():
     with open('tmp/data.txt', 'r') as f:
         data = f.read()
         records = json.loads(data)
-        
         return jsonify(records)
         return jsonify({'error': 'data not found'})
 

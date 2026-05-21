@@ -7,8 +7,13 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 from sklearn.linear_model import Lasso
 
+# Si lo pongo al principio me coloco en el directorio en el que está mi script. Así consigo que 
+# se ejecute desde ahi y si luego accedo a cosas (modelo, ficheros...)
+os.chdir (os.path.dirname (__file__))
+
 app = Flask(__name__)
-app.config["DEBUG"] = True
+app.config["DEBUG"] = True # en el momento en el que tenga la api funcionando esto se pone a False. Que
+                           # deje de debuggear 
 
 # Ligado al endopoint "/" o sea el home, con el método GET
 @app.route('/', methods=['GET'])
@@ -56,4 +61,5 @@ def retrain():
     else:
         return f"<h2>New data for retrain NOT FOUND. Nothing done!</h2>"
 
+# Faltaría un endpoint nuevo en el que pudieramos subir una fila al csv y reentrenar el modelo
 app.run()
