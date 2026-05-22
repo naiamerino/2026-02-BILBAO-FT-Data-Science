@@ -66,9 +66,5 @@ def retrain():
     else:
         return f"<h2>New data for retrain NOT FOUND. Nothing done!</h2>"
 
-
-
-
-
-
-app.run()
+if __name__ == '__main__':
+    app.run()
