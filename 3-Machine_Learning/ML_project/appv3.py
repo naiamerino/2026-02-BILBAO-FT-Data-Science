@@ -1,0 +1,965 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import pickle
+import random
+from datetime import date
+from features import (forma_reciente, winrate, headtohead, experiencia,
+                      get_ranking, get_elo)
+
+# ─── Configuración de la página ───────────────────────────────────────────────
+st.set_page_config(
+    page_title="WTA Match Predictor",
+    page_icon="🎾",
+    layout="centered"
+)
+
+# ─── Estilos ──────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+        background-color: #0f0f0f;
+        color: #f0f0f0;
+    }
+    .titulo {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 3.5rem;
+        letter-spacing: 0.08em;
+        color: #c8f000;
+        margin-bottom: 0;
+        line-height: 1;
+    }
+    .subtitulo {
+        font-size: 0.9rem;
+        color: #888;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-bottom: 2rem;
+    }
+    .vs {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        color: #444;
+        text-align: center;
+        padding-top: 1.5rem;
+    }
+    .prob-box {
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+    .prob-ganadora {
+        background: linear-gradient(135deg, #c8f000 0%, #8ab800 100%);
+        color: #0f0f0f;
+    }
+    .prob-perdedora {
+        background: #1e1e1e;
+        color: #888;
+        border: 1px solid #333;
+    }
+    .prob-nombre {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .prob-numero {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 3rem;
+        line-height: 1;
+    }
+    .prob-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.3rem;
+    }
+    .divider {
+        border: none;
+        border-top: 1px solid #222;
+        margin: 2rem 0;
+    }
+    .info-chip {
+        display: inline-block;
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 20px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.8rem;
+        color: #aaa;
+        margin: 0.2rem;
+    }
+    .stSelectbox label, .stDateInput label {
+        color: #aaa !important;
+        font-size: 0.85rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .stSelectbox > div > div {
+        background-color: #1e1e1e !important;
+        border-color: #333 !important;
+        color: #f0f0f0 !important;
+    }
+    .stButton > button {
+        background: #c8f000;
+        color: #0f0f0f;
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        padding: 0.7rem 2rem;
+        width: 100%;
+        letter-spacing: 0.05em;
+        transition: opacity 0.2s;
+    }
+    .stButton > button:hover {
+        opacity: 0.85;
+        color: #0f0f0f;
+    }
+    .warning-box {
+        background: #1e1e1e;
+        border-left: 3px solid #c8f000;
+        padding: 0.8rem 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.85rem;
+        color: #aaa;
+        margin-top: 1rem;
+    }
+    .ronda-header {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.3rem;
+        color: #c8f000;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.4rem;
+        margin-top: 0.5rem;
+    }
+    .partido-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #1e1e1e;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.3rem;
+        font-size: 0.88rem;
+    }
+    .partido-ganadora { color: #f0f0f0; font-weight: 500; }
+    .partido-perdedora { color: #999696; }
+    .partido-prob {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.15rem;
+        color: #c8f000;
+    }
+    .mc-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.45rem;
+        background: #1a1a1a;
+        padding: 0.35rem 0.8rem;
+        border-radius: 6px;
+    }
+    .mc-nombre {
+        width: 160px;
+        font-size: 0.88rem;
+        color: #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mc-bar-wrap {
+        flex: 1;
+        background: #2a2a2a;
+        border-radius: 4px;
+        height: 18px;
+        overflow: hidden;
+    }
+    .mc-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #c8f000, #8ab800);
+        border-radius: 4px;
+    }
+    .mc-pct {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.1rem;
+        color: #c8f000;
+        width: 52px;
+        text-align: right;
+    }
+    .bracket-cell {
+        background: #1e1e1e;
+        border: 1px solid #2a2a2a;
+        border-radius: 6px;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.82rem;
+        color: #f0f0f0;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .bracket-cell.ganadora {
+        border-color: #c8f000;
+        color: #c8f000;
+        font-weight: 600;
+    }
+    .bracket-cell.perdedora {
+        color: #999696;
+        border-color: #222;
+    }
+    .bracket-match {
+        margin-bottom: 1rem;
+    }
+    .bracket-prob {
+        font-size: 0.7rem;
+        color: #666;
+        text-align: right;
+        margin-top: 2px;
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.05em;
+    }
+    .campeonas-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.8rem;
+        color: #c8f000;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.8rem;
+        margin-top: 1.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+#----
+
+# ─── Definición de funciones ────────────────────────────────────────────────────
+#
+# Dadas dos jugadoras calcular las features a fecha dada. Para el predictor de 1 partido
+def construir_features(df_wta, p1, p2, superficie, ronda, fecha):
+    rank_p1 = get_ranking(df_wta, p1, fecha)
+    rank_p2 = get_ranking(df_wta, p2, fecha)
+    elo_p1_global = get_elo (df_wta, p1, fecha)
+    elo_p2_global = get_elo (df_wta, p2, fecha)
+    elo_p1_superficie = get_elo (df_wta,p1,fecha,superficie)
+    elo_p2_superficie = get_elo (df_wta,p2,fecha,superficie)
+
+    row = {
+        'surface': superficie,
+        'round': ronda,
+        'rank_diff': rank_p1 - rank_p2,
+        'wins2meses_p1': forma_reciente(df_wta, p1, fecha),
+        'wins2meses_p2': forma_reciente(df_wta, p2, fecha),
+        'ratio_superficie_p1': winrate(df_wta, p1, fecha, superficie=superficie),
+        'ratio_superficie_p2': winrate(df_wta, p2, fecha, superficie=superficie),
+        'h2h': headtohead(df_wta, p1, p2, fecha),
+        'ratio_ronda_p1': winrate(df_wta, p1, fecha, ronda=ronda),
+        'ratio_ronda_p2': winrate(df_wta, p2, fecha, ronda=ronda),
+        'experiencia_p1': experiencia(df_wta, p1, fecha),
+        'experiencia_p2': experiencia(df_wta, p2, fecha),
+        'tournament_type': 'GS',  # por defecto
+        'elo_p1':          elo_p1_superficie,
+        'elo_p2':          elo_p2_superficie,
+        'elo_diff':        elo_p1_superficie - elo_p2_superficie,
+        'elo_global_p1':   elo_p1_global,
+        'elo_global_p2':   elo_p2_global,
+        'elo_global_diff': elo_p1_global - elo_p2_global,
+        'is_new_p1': int(experiencia(df_wta, p1, fecha) < 10),
+        'is_new_p2': int(experiencia(df_wta, p2, fecha) < 10),
+    }
+    return pd.DataFrame([row])
+
+# Para el cuadro de un torneo construir las features de todas las jugadoras y cachearlo
+def calculo_features_jugadoras_torneo (df, cuadro):
+    fecha = pd.to_datetime('2026-05-05')
+    superficie = 'Clay'
+    rondas = ['1st Round', '2nd Round', '3rd Round', '4th Round', 
+              'Quarterfinals', 'Semifinals', 'The Final']
+    
+    cache_features = {}
+    for jugadora in cuadro:
+
+        # Calcular los valores
+        wins2meses_val = forma_reciente(df, jugadora, fecha)
+        ratio_superficie_val = winrate(df, jugadora, fecha, superficie=superficie)
+        experiencia_val = experiencia(df, jugadora, fecha)
+        ranking_val = get_ranking(df, jugadora, fecha)
+        elo_global = get_elo (df, jugadora, fecha)
+        elo_superficie = get_elo (df,jugadora,fecha,superficie)
+        
+        # Calcular winrate por ronda
+        winrate_por_ronda = {}
+        for ronda in rondas:
+            winrate_por_ronda[ronda] = winrate(df, jugadora, fecha, ronda=ronda)
+    
+        cache_features[jugadora] = {
+            'wins2meses': wins2meses_val,
+            'ratio_superficie': ratio_superficie_val,
+            'experiencia': experiencia_val,
+            'ranking': ranking_val,
+            'winrate_por_ronda': winrate_por_ronda,
+            'elo_global':   elo_global,
+            'elo_superficie': elo_superficie
+        }
+
+    # Y una caché para los h2h entre cada par
+    cache_h2h = {}
+    for i, p1 in enumerate(cuadro):
+        for p2 in cuadro[i+1:]:
+            cache_h2h[(p1, p2)] = headtohead(df, p1, p2, fecha)
+            cache_h2h[(p2, p1)] = 1 - cache_h2h[(p1, p2)]
+    
+    return cache_features, cache_h2h
+
+def construir_features_desde_cache (cache_features, cache_h2h, p1, p2, superficie, ronda):
+    f1 = cache_features[p1]
+    f2 = cache_features[p2]
+
+    row = {
+        'surface':             superficie,
+        'round':               ronda,
+        'rank_diff':           f1['ranking'] - f2['ranking'],
+        'wins2meses_p1':       f1['wins2meses'],
+        'wins2meses_p2':       f2['wins2meses'],
+        'ratio_superficie_p1': f1['ratio_superficie'],
+        'ratio_superficie_p2': f2['ratio_superficie'],
+        'h2h':                 cache_h2h.get((p1, p2), 0.5),
+        'ratio_ronda_p1':      f1['winrate_por_ronda'][ronda],
+        'ratio_ronda_p2':      f2['winrate_por_ronda'][ronda],
+        'experiencia_p1':      f1['experiencia'],
+        'experiencia_p2':      f2['experiencia'],
+        'tournament_type':     'GS',
+        'elo_p1':          f1['elo_superficie'],
+        'elo_p2':          f2['elo_superficie'],
+        'elo_diff':        f1['elo_superficie'] - f2['elo_superficie'],
+        'elo_global_p1':   f1['elo_global'],
+        'elo_global_p2':   f2['elo_global'],
+        'elo_global_diff': f1['elo_global'] - f2['elo_global'],
+        'is_new_p1': int(f1['experiencia'] < 10),
+        'is_new_p2': int(f2['experiencia'] < 10),
+
+    }
+    return pd.DataFrame([row])
+
+# ─── Funciones de simulacion de partido y torneo ────────────────────────────────────────────────────
+def simular_partido(prob_a):
+  # lanzamos un dado cargado
+  return random.random() < prob_a
+
+def simular_torneo(cache_features, cache_h2h, cuadro, modelo):
+    fecha = pd.to_datetime('2026-05-05')
+    superficie = 'Clay'
+    rondas = ['1st Round', '2nd Round', '3rd Round', '4th Round', 
+              'Quarterfinals', 'Semifinals', 'The Final']
+    
+    jugadoras = cuadro.copy()
+    indice_ronda = 0 
+
+    while len(jugadoras) > 1:
+        siguiente_ronda = []
+        ronda_actual = rondas[indice_ronda]  # Nombre de la ronda actual
+   
+        # Emparejar jugadoras
+        for i in range(0, len(jugadoras), 2):
+            a, b = jugadoras[i], jugadoras[i+1]
+            X = construir_features_desde_cache (cache_features, cache_h2h, a, b, superficie, ronda_actual)
+            prob_a = modelo.predict_proba(X)[0][1]  # Clase 1: probabilidad de que gane p1(a)
+            
+            ganadora = a if simular_partido(prob_a) else b
+            siguiente_ronda.append(ganadora)
+        
+        # Actualizar para la siguiente ronda
+        jugadoras = siguiente_ronda
+        indice_ronda += 1  
+        
+
+    return jugadoras[0]
+# ---- Simulación Monte Carlo
+# SIMULACIÓN MONTE CARLO
+def simulacion_montecarlo(cache_features, cacheh2h, cuadro, modelo, n_simulaciones=10000):
+
+    victorias = {}  # Diccionario vacío
+    
+    for _ in range(n_simulaciones):
+        campeona = simular_torneo(cache_features, cacheh2h, cuadro, modelo)
+
+        if campeona in victorias:
+            victorias[campeona] += 1
+        else:
+            victorias[campeona] = 1
+    
+    # Calcular probabilidades
+    probabilidades = {}
+    for jugadora, wins in victorias.items():
+        probabilidades[jugadora] = wins / n_simulaciones
+    
+    return probabilidades, victorias
+
+# Funciones de cálculo de ELO para actualizar estado y hacer seguimiento del torneo
+def expected_score_elo(a, b):
+    return 1 / (1 + 10 ** ((b - a) / 400))
+ 
+def actualizar_elo_partido(df_vivo, p1, p2, ganadora, superficie, k=32):
+    """Calcula ELOs post-partido y devuelve una fila lista para añadir al df_vivo."""
+    perdedora = p2 if ganadora == p1 else p1
+ 
+    elo_g_s = get_elo(df_vivo, ganadora,  None,       tipo='superficie') if False else get_elo(df_vivo, ganadora,  pd.Timestamp('2099-01-01'), tipo='superficie')
+    elo_p_s = get_elo(df_vivo, perdedora, pd.Timestamp.now(), tipo='superficie')
+    elo_g_g = get_elo(df_vivo, ganadora,  pd.Timestamp.now(), tipo='global')
+    elo_p_g = get_elo(df_vivo, perdedora, pd.Timestamp.now(), tipo='global')
+ 
+    e = expected_score_elo(elo_g_s, elo_p_s)
+    nuevo_g_s = elo_g_s + k * (1 - e)
+    nuevo_p_s = elo_p_s + k * (0 - (1 - e))
+ 
+    e2 = expected_score_elo(elo_g_g, elo_p_g)
+    nuevo_g_g = elo_g_g + k * (1 - e2)
+    nuevo_p_g = elo_p_g + k * (0 - (1 - e2))
+ 
+    elo_p1_s = nuevo_g_s if ganadora == p1 else nuevo_p_s
+    elo_p2_s = nuevo_p_s if ganadora == p1 else nuevo_g_s
+    elo_p1_g = nuevo_g_g if ganadora == p1 else nuevo_p_g
+    elo_p2_g = nuevo_p_g if ganadora == p1 else nuevo_g_g
+ 
+    return {
+        'Date':            pd.Timestamp('2026-05-26'),  # fecha aproximada, se sobreescribe
+        'Surface':         superficie,
+        'Round':           '',
+        'Player_1':        p1,
+        'Player_2':        p2,
+        'Winner':          ganadora,
+        'Rank_1':          get_ranking(df_vivo, p1, pd.Timestamp('2099-01-01')),
+        'Rank_2':          get_ranking(df_vivo, p2, pd.Timestamp('2099-01-01')),
+        'Pts_1':           None, 'Pts_2': None,
+        'Odd_1':           None, 'Odd_2': None,
+        'Score':           None,
+        'tournament_type': 'GS',
+        'prob_1':          None, 'prob_2': None,
+        'target':          1 if ganadora == p1 else 0,
+        'elo_p1':          elo_p1_s,
+        'elo_p2':          elo_p2_s,
+        'elo_diff':        elo_p1_s - elo_p2_s,
+        'elo_global_p1':   elo_p1_g,
+        'elo_global_p2':   elo_p2_g,
+        'elo_global_diff': elo_p1_g - elo_p2_g,
+    }
+ 
+ 
+def construir_features_vivo(df_vivo, p1, p2, superficie, ronda, fecha):
+    """Igual que construir_features pero leyendo del df_vivo actualizado."""
+    rank_p1        = get_ranking(df_vivo, p1, fecha)
+    rank_p2        = get_ranking(df_vivo, p2, fecha)
+    elo_p1_g       = get_elo(df_vivo, p1, fecha, tipo='global')
+    elo_p2_g       = get_elo(df_vivo, p2, fecha, tipo='global')
+    elo_p1_s       = get_elo(df_vivo, p1, fecha, tipo='superficie')
+    elo_p2_s       = get_elo(df_vivo, p2, fecha, tipo='superficie')
+ 
+    row = {
+        'surface':             superficie,
+        'round':               ronda,
+        'rank_diff':           rank_p1 - rank_p2,
+        'wins2meses_p1':       forma_reciente(df_vivo, p1, fecha),
+        'wins2meses_p2':       forma_reciente(df_vivo, p2, fecha),
+        'ratio_superficie_p1': winrate(df_vivo, p1, fecha, superficie=superficie),
+        'ratio_superficie_p2': winrate(df_vivo, p2, fecha, superficie=superficie),
+        'h2h':                 headtohead(df_vivo, p1, p2, fecha),
+        'ratio_ronda_p1':      winrate(df_vivo, p1, fecha, ronda=ronda),
+        'ratio_ronda_p2':      winrate(df_vivo, p2, fecha, ronda=ronda),
+        'experiencia_p1':      experiencia(df_vivo, p1, fecha),
+        'experiencia_p2':      experiencia(df_vivo, p2, fecha),
+        'tournament_type':     'GS',
+        'elo_p1':              elo_p1_s,
+        'elo_p2':              elo_p2_s,
+        'elo_diff':            elo_p1_s - elo_p2_s,
+        'elo_global_p1':       elo_p1_g,
+        'elo_global_p2':       elo_p2_g,
+        'elo_global_diff':     elo_p1_g - elo_p2_g,
+        'is_new_p1':           int(experiencia(df_vivo, p1, fecha) < 10),
+        'is_new_p2':           int(experiencia(df_vivo, p2, fecha) < 10),
+    }
+    return pd.DataFrame([row])
+ 
+
+# ─── Cargar datos, modelo y cuadro del torneo ─────────────────────────────────────────────────────
+@st.cache_resource
+def cargar_modelo():
+    with open('gbx_v3.model', 'rb') as f:
+        return pickle.load(f)
+
+@st.cache_data
+def cargar_wta():
+    return pd.read_csv('wta_limpio_actualizado.csv', low_memory=False, parse_dates=['Date'])
+
+@st.cache_resource
+def cargar_cache_torneo(wta):
+    with open("cuadro_python_list.txt", "r", encoding="utf-8") as f:
+        codigo = f.read()
+    local_vars = {}
+    exec(codigo, {}, local_vars)
+    cuadro = local_vars['cuadro']
+    cache_features, cache_h2h = calculo_features_jugadoras_torneo(wta, cuadro)
+    return cuadro, cache_features, cache_h2h
+
+# ── Inicialización del session_state ────────────────────────────────────────
+ 
+if 'rg_inicializado' not in st.session_state:
+    st.session_state.rg_inicializado   = False
+    st.session_state.rg_df_vivo        = None   # copia viva del wta_limpio
+    st.session_state.rg_jugadoras      = []     # jugadoras vivas en el torneo
+    st.session_state.rg_ronda_idx      = 0      # índice de ronda actual
+    st.session_state.rg_historial      = []     # resultados confirmados por ronda
+    st.session_state.rg_fecha_torneo   = pd.Timestamp.now()
+
+modelo = cargar_modelo()
+wta = cargar_wta()
+cuadro, cache_features, cache_h2h = cargar_cache_torneo(wta)
+
+# ─── Jugadoras activas (con partidos en el último año del dataset) ─────────────
+@st.cache_data
+def jugadoras_activas(wta):
+    fecha_max = wta['Date'].max()
+    fecha_corte = fecha_max - pd.DateOffset(months=12)
+    recientes = wta[wta['Date'] >= fecha_corte]
+    jugadoras = pd.concat([recientes['Player_1'], recientes['Player_2']]).unique()
+    return sorted(jugadoras)
+
+jugadoras = jugadoras_activas(wta)
+
+
+# ─── UI ───────────────────────────────────────────────────────────────────────
+#tab1, tab2, tab3 = st.tabs(["Predictor de partido", "Simulador del torneo", "Roland Garros 2026 en vivo"])
+tab1, tab2, tab3, tab4 = st.tabs(["Predictor de partido", "Simulador del torneo", "Roland Garros 2026 en vivo", "🔴 TEST"])
+
+st.sidebar.write("Script llegó hasta los tabs")
+with tab1:
+    st.markdown('<p class="titulo">WTA Match<br>Predictor</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitulo">Machine Learning · WTA 2007–2026</p>', unsafe_allow_html=True)
+
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+    # Selectores de jugadoras
+    col1, col_vs, col2 = st.columns([5, 1, 5])
+
+    with col1:
+        p1 = st.selectbox("Jugadora 1", jugadoras, index=0)
+
+    with col_vs:
+        st.markdown('<p class="vs">VS</p>', unsafe_allow_html=True)
+
+    with col2:
+        p2 = st.selectbox("Jugadora 2", jugadoras, index=1)
+
+    # Configuración del partido
+    col3, col4, col5 = st.columns(3)
+
+    with col3:
+        superficie = st.selectbox("Superficie", ['Clay', 'Hard', 'Grass'])
+
+    with col4:
+        ronda = st.selectbox("Ronda", [
+            '1st Round', '2nd Round', '3rd Round', '4th Round',
+            'Quarterfinals', 'Semifinals', 'The Final'
+        ])
+
+    with col5:
+        fecha = st.date_input("Fecha", value=date.today())
+
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+    # Botón de predicción
+    if st.button("🎾 Predecir resultado"):
+
+        if p1 == p2:
+            st.error("Selecciona dos jugadoras distintas.")
+        else:
+            with st.spinner("Calculando..."):
+                fecha_pd = pd.Timestamp(fecha)
+                X = construir_features(wta, p1, p2, superficie, ronda, fecha_pd)
+
+                proba = modelo.predict_proba(X)[0]
+                prob_p1 = proba[1]
+                prob_p2 = proba[0]
+
+                ganadora = p1 if prob_p1 > prob_p2 else p2
+                prob_ganadora = max(prob_p1, prob_p2)
+                prob_perdedora = min(prob_p1, prob_p2)
+                perdedora = p2 if ganadora == p1 else p1
+
+            # Resultados
+            col_g, col_p = st.columns(2)
+
+            with col_g:
+                st.markdown(f"""
+                <div class="prob-box prob-ganadora">
+                    <div class="prob-nombre">🏆 {ganadora}</div>
+                    <div class="prob-numero">{prob_ganadora:.0%}</div>
+                    <div class="prob-label">Probabilidad de victoria</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col_p:
+                st.markdown(f"""
+                <div class="prob-box prob-perdedora">
+                    <div class="prob-nombre">{perdedora}</div>
+                    <div class="prob-numero">{prob_perdedora:.0%}</div>
+                    <div class="prob-label">Probabilidad de victoria</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Info adicional
+            h2h_val = headtohead(wta, p1, p2, fecha_pd)
+            forma_p1 = forma_reciente(wta, p1, fecha_pd)
+            forma_p2 = forma_reciente(wta, p2, fecha_pd)
+
+            st.markdown(f"""
+            <div style="margin-top: 1.5rem; text-align: center">
+                <span class="info-chip">H2H {p1.split()[0]}: {h2h_val:.0%}</span>
+                <span class="info-chip">Forma {p1.split()[0]}: {forma_p1:.0%}</span>
+                <span class="info-chip">Forma {p2.split()[0]}: {forma_p2:.0%}</span>
+                <span class="info-chip">Superficie: {superficie}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div class="warning-box">
+                Predicción basada en {experiencia(wta, p1, fecha_pd)} partidos históricos de {p1.split()[0]} 
+                y {experiencia(wta, p2, fecha_pd)} de {p2.split()[0]} hasta {fecha}.
+            </div>
+            """, unsafe_allow_html=True)
+st.sidebar.write("antes de tab2")
+with tab2:
+    st.markdown('<div class="titulo">Simulador del torneo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitulo">Roland Garros 2025 · Cuadro femenino · Monte Carlo</div>', unsafe_allow_html=True)
+ 
+
+    n_sims = st.selectbox(
+        "Simulaciones Monte Carlo",
+        options=[100, 500, 1000, 5000, 10000],
+        index=2
+    )
+
+    lanzar = st.button("⚡ Simular torneo")
+ 
+    if lanzar:
+        rondas_nombres = ['1st Round', '2nd Round', '3rd Round', '4th Round',
+                          'Quarterfinals', 'Semifinals', 'The Final']
+        rondas_es = {
+            '1st Round': 'Primera ronda',
+            '2nd Round': 'Segunda ronda',
+            '3rd Round': 'Tercera ronda',
+            '4th Round': 'Cuarta ronda',
+            'Quarterfinals': 'Cuartos de final',
+            'Semifinals': 'Semifinales',
+            'The Final': 'Final',
+        }
+        rondas_bracket = ['Quarterfinals', 'Semifinals', 'The Final']
+        rondas_expander = ['1st Round', '2nd Round', '3rd Round', '4th Round']
+        fecha = pd.to_datetime('2026-05-05')
+        superficie = 'Clay'
+ 
+        ## ── SIMULACIÓN RONDA A RONDA ─────────────────────────────────────────
+        jugadoras = cuadro.copy()
+        resultados_por_ronda = {}
+ 
+        for ronda_actual in rondas_nombres:
+            if len(jugadoras) <= 1:
+                break
+            siguiente_ronda = []
+            partidos_ronda = []
+ 
+            for i in range(0, len(jugadoras), 2):
+                a, b = jugadoras[i], jugadoras[i + 1]
+                X = construir_features_desde_cache(
+                    cache_features, cache_h2h, a, b, superficie, ronda_actual
+                )
+                prob_a = modelo.predict_proba(X)[0][1]
+                prob_b = 1 - prob_a
+                ganadora = a if simular_partido(prob_a) else b
+                perdedora = b if ganadora == a else a
+                prob_gan = prob_a if ganadora == a else prob_b
+ 
+                siguiente_ronda.append(ganadora)
+                partidos_ronda.append({
+                    'a': a, 'b': b,
+                    'ganadora': ganadora,
+                    'perdedora': perdedora,
+                    'prob': prob_gan
+                })
+ 
+            resultados_por_ronda[ronda_actual] = partidos_ronda
+            jugadoras = siguiente_ronda
+ 
+        campeona_sim = jugadoras[0] if jugadoras else '—'
+ 
+        ## ── RONDAS PREVIAS (expanders) ───────────────────────────────────────
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown('<div class="campeonas-title">Desarrollo del torneo</div>', unsafe_allow_html=True)
+ 
+        for ronda in rondas_expander:
+            if ronda not in resultados_por_ronda:
+                continue
+            with st.expander(rondas_es[ronda], expanded=False):
+                html = ""
+                for p in resultados_por_ronda[ronda]:
+                    html += f"""
+                    <div class="partido-row">
+                        <span class="partido-ganadora">🏆 {p['ganadora']}</span>
+                        <span class="partido-perdedora">{p['perdedora']}</span>
+                        <span class="partido-prob">{p['prob']*100:.0f}%</span>
+                    </div>"""
+                st.markdown(html, unsafe_allow_html=True)
+ 
+        ## ── BRACKET QF / SF / FINAL ──────────────────────────────────────────
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+ 
+        rondas_bracket_presentes = [r for r in rondas_bracket if r in resultados_por_ronda]
+        if rondas_bracket_presentes:
+            cols = st.columns(len(rondas_bracket_presentes))
+            for idx, ronda in enumerate(rondas_bracket_presentes):
+                with cols[idx]:
+                    st.markdown(
+                        f'<div class="ronda-header">{rondas_es[ronda]}</div>',
+                        unsafe_allow_html=True
+                    )
+                    for p in resultados_por_ronda[ronda]:
+                        st.markdown(f"""
+                        <div class="bracket-match">
+                            <div class="bracket-cell ganadora">🏆 {p['ganadora']}</div>
+                            <div class="bracket-cell perdedora">{p['perdedora']}</div>
+                            <div class="bracket-prob">{p['prob']*100:.0f}% de victoria</div>
+                        </div>""", unsafe_allow_html=True)
+ 
+        ## ── CAMPEONA ─────────────────────────────────────────────────────────
+        st.markdown(
+            f'<div class="prob-box prob-ganadora" style="margin-top:1.5rem;">'
+            f'<div class="prob-label">Campeona simulada</div>'
+            f'<div class="prob-numero">{campeona_sim}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+ 
+        ## ── MONTE CARLO ──────────────────────────────────────────────────────
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown('<div class="campeonas-title">Probabilidades Monte Carlo</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="subtitulo">{n_sims:,} simulaciones · % de veces que ganó el torneo</div>',
+            unsafe_allow_html=True
+        )
+ 
+        with st.spinner("Simulando..."):
+            _, victorias = simulacion_montecarlo(
+                cache_features, cache_h2h, cuadro, modelo, n_sims
+            )
+ 
+        top10 = sorted(victorias.items(), key=lambda x: x[1], reverse=True)[:10]
+        max_wins = top10[0][1] if top10 else 1
+        medallas = ["🥇", "🥈", "🥉"]
+ 
+        bars_html = ""
+        for i, (jugadora, wins) in enumerate(top10):
+            pct = wins / n_sims * 100
+            bar_pct = wins / max_wins * 100
+            medal = medallas[i] if i < 3 else f"{i+1}."
+            bars_html += f"""
+            <div class="mc-row">
+                <div class="mc-nombre">{medal} {jugadora}</div>
+                <div class="mc-bar-wrap">
+                    <div class="mc-bar-fill" style="width:{bar_pct:.1f}%"></div>
+                </div>
+                <div class="mc-pct">{pct:.1f}%</div>
+            </div>"""
+ 
+        st.markdown(bars_html, unsafe_allow_html=True)
+        
+# ── TAB 3 ────────────────────────────────────────────────────────────────────
+st.sidebar.write("Script llegó hasta el tab3")
+with tab3:
+    st.write("TAB 3 CARGADO")
+    st.write(st.session_state)
+    st.markdown('<div class="titulo">Roland Garros<br>En Vivo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitulo">Seguimiento ronda a ronda · Features dinámicas</div>',
+                unsafe_allow_html=True)
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+    RONDAS_RG = ['1st Round', '2nd Round', '3rd Round', '4th Round',
+                 'Quarterfinals', 'Semifinals', 'The Final']
+    RONDAS_ES = {
+        '1st Round':    'Primera ronda',
+        '2nd Round':    'Segunda ronda',
+        '3rd Round':    'Tercera ronda',
+        '4th Round':    'Cuarta ronda',
+        'Quarterfinals':'Cuartos de final',
+        'Semifinals':   'Semifinales',
+        'The Final':    'Final',
+    }
+    SUPERFICIE = 'Clay'
+
+    # ── Botón de reset ───────────────────────────────────────────────────────
+    col_reset, col_void = st.columns([2, 8])
+    with col_reset:
+        if st.button("🔄 Reiniciar torneo"):
+            st.session_state.rg_inicializado = False
+            st.session_state.rg_df_vivo      = None
+            st.session_state.rg_jugadoras    = []
+            st.session_state.rg_ronda_idx    = 0
+            st.session_state.rg_historial    = []
+            st.rerun()
+
+    # ── Inicializar si es la primera vez ────────────────────────────────────
+    if not st.session_state.rg_inicializado:
+        st.info("Pulsa **Iniciar torneo** para cargar el cuadro y comenzar el seguimiento.")
+        if st.button("⚡ Iniciar torneo"):
+            st.session_state.rg_df_vivo     = wta.copy()   # copia viva en sesión
+            st.session_state.rg_jugadoras   = cuadro.copy()
+            st.session_state.rg_ronda_idx   = 0
+            st.session_state.rg_historial   = []
+            st.session_state.rg_inicializado = True
+            st.rerun()
+    else:
+        # ── Estado actual ────────────────────────────────────────────────────────
+        df_vivo   = st.session_state.rg_df_vivo
+        jugadoras = st.session_state.rg_jugadoras
+        ronda_idx = st.session_state.rg_ronda_idx
+
+        # ── Historial de rondas anteriores (colapsado) ───────────────────────────
+        if st.session_state.rg_historial:
+            st.markdown('<div class="campeonas-title">Rondas completadas</div>',
+                        unsafe_allow_html=True)
+            for ronda_pasada in st.session_state.rg_historial:
+                nombre_ronda = ronda_pasada['ronda']
+                with st.expander(RONDAS_ES[nombre_ronda], expanded=False):
+                    html = ""
+                    for p in ronda_pasada['partidos']:
+                        acerto = "✓" if p['acerto'] else "✗"
+                        color_ac = "#c8f000" if p['acerto'] else "#ff4444"
+                        html += f"""
+                        <div class="partido-row">
+                            <span class="partido-ganadora">🏆 {p['ganadora']}</span>
+                            <span class="partido-perdedora">{p['perdedora']}</span>
+                            <span class="partido-prob">{p['prob_ganadora']*100:.0f}%</span>
+                            <span style="font-size:0.8rem; color:{color_ac}; margin-left:0.5rem">{acerto}</span>
+                        </div>"""
+                    st.markdown(html, unsafe_allow_html=True)
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+        # ── Torneo terminado ─────────────────────────────────────────────────────
+        if ronda_idx >= len(RONDAS_RG) or len(jugadoras) == 1:
+            campeona = jugadoras[0] if jugadoras else "—"
+            st.markdown(
+                f'<div class="prob-box prob-ganadora" style="margin-top:1rem;">'
+                f'<div class="prob-label">🏆 Campeona de Roland Garros 2026</div>'
+                f'<div class="prob-numero">{campeona}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            
+
+        # ── Ronda actual ─────────────────────────────────────────────────────────
+        ronda_actual = RONDAS_RG[ronda_idx]
+        fecha_pred   = st.session_state.rg_fecha_torneo
+
+        st.markdown(f'<div class="campeonas-title">{RONDAS_ES[ronda_actual]}</div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="subtitulo">{len(jugadoras)//2} partidos · Features calculadas con datos actualizados</div>',
+            unsafe_allow_html=True
+        )
+
+        # Calcular probabilidades para todos los partidos de la ronda
+        partidos_ronda = []
+        for i in range(0, len(jugadoras), 2):
+            a, b = jugadoras[i], jugadoras[i+1]
+            X       = construir_features_vivo(df_vivo, a, b, SUPERFICIE, ronda_actual, fecha_pred)
+            prob_a  = modelo.predict_proba(X)[0][1]
+            prob_b  = 1 - prob_a
+            partidos_ronda.append({'p1': a, 'p2': b, 'prob_p1': prob_a, 'prob_p2': prob_b})
+
+        # Mostrar partidos con selector de ganadora
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        selecciones = {}
+
+        for i, partido in enumerate(partidos_ronda):
+            p1, p2   = partido['p1'], partido['p2']
+            prob_p1  = partido['prob_p1']
+            prob_p2  = partido['prob_p2']
+            favorita = p1 if prob_p1 >= prob_p2 else p2
+            prob_fav = max(prob_p1, prob_p2)
+            prob_und = min(prob_p1, prob_p2)
+            underdog = p2 if favorita == p1 else p1
+
+            # Cabecera del partido
+            col_fav, col_vs, col_und = st.columns([5, 1, 5])
+            with col_fav:
+                st.markdown(f"""
+                <div class="prob-box prob-ganadora" style="padding:0.8rem; margin-top:0.5rem;">
+                    <div class="prob-nombre">{favorita}</div>
+                    <div class="prob-numero">{prob_fav:.0%}</div>
+                    <div class="prob-label">Favorita</div>
+                </div>""", unsafe_allow_html=True)
+            with col_vs:
+                st.markdown('<p class="vs">VS</p>', unsafe_allow_html=True)
+            with col_und:
+                st.markdown(f"""
+                <div class="prob-box prob-perdedora" style="padding:0.8rem; margin-top:0.5rem;">
+                    <div class="prob-nombre">{underdog}</div>
+                    <div class="prob-numero">{prob_und:.0%}</div>
+                    <div class="prob-label">Underdog</div>
+                </div>""", unsafe_allow_html=True)
+
+            # Selector de ganadora
+            selecciones[i] = st.selectbox(
+                f"Ganadora del partido {i+1}",
+                options=[p1, p2],
+                key=f"rg_sel_{ronda_idx}_{i}"
+            )
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+        # ── Botón confirmar ronda ────────────────────────────────────────────────
+        if st.button(f"✅ Confirmar {RONDAS_ES[ronda_actual]} y calcular siguiente ronda"):
+
+            nuevas_jugadoras = []
+            partidos_guardados = []
+            nuevas_filas_df = []
+
+            for i, partido in enumerate(partidos_ronda):
+                p1, p2    = partido['p1'], partido['p2']
+                prob_p1   = partido['prob_p1']
+                prob_p2   = partido['prob_p2']
+                ganadora  = selecciones[i]
+                perdedora = p2 if ganadora == p1 else p1
+                prob_gan  = prob_p1 if ganadora == p1 else prob_p2
+                acerto    = (ganadora == p1 and prob_p1 > 0.5) or (ganadora == p2 and prob_p2 > 0.5)
+
+                nuevas_jugadoras.append(ganadora)
+                partidos_guardados.append({
+                    'ganadora':      ganadora,
+                    'perdedora':     perdedora,
+                    'prob_ganadora': prob_gan,
+                    'acerto':        acerto,
+                })
+
+                # Construir fila para añadir al df_vivo con ELO actualizado
+                fila = actualizar_elo_partido(df_vivo, p1, p2, ganadora, SUPERFICIE)
+                fila['Date']  = fecha_pred
+                fila['Round'] = ronda_actual
+                nuevas_filas_df.append(fila)
+
+            # Actualizar df_vivo con los partidos de esta ronda
+            df_nuevas = pd.DataFrame(nuevas_filas_df)
+            st.session_state.rg_df_vivo = pd.concat(
+                [df_vivo, df_nuevas], ignore_index=True
+            )
+
+            # Guardar historial y avanzar ronda
+            st.session_state.rg_historial.append({
+                'ronda':    ronda_actual,
+                'partidos': partidos_guardados,
+            })
+            st.session_state.rg_jugadoras  = nuevas_jugadoras
+            st.session_state.rg_ronda_idx  = ronda_idx + 1
+            st.session_state.rg_fecha_torneo = fecha_pred + pd.Timedelta(days=3)
+
+            st.rerun()
+
+st.write("fin del script")
